@@ -118,7 +118,7 @@ class Empty extends TweetSet {
 
   override def descendingByRetweet: TweetList = Nil
 
-    def contains(tweet: Tweet): Boolean = false
+  def contains(tweet: Tweet): Boolean = false
 
   def incl(tweet: Tweet): TweetSet = new NonEmpty(tweet, new Empty, new Empty)
 
@@ -131,11 +131,23 @@ class Empty extends TweetSet {
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
 
   override def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet =
-    if(p(elem)) right.filterAcc(p, left.filterAcc(p,acc)).incl(elem)
-    else  right.filterAcc(p, left.filterAcc(p,acc))
+    if(p(elem))
+      right.filterAcc(p, left.filterAcc(p,acc)).incl(elem)
+    else
+      right.filterAcc(p, left.filterAcc(p,acc))
 
   override def union(that: TweetSet): TweetSet = {
-      left.union(right).union(that).incl(elem)
+    if( that.isInstanceOf[Empty])
+      this
+    else if ( left.isInstanceOf[Empty] && right.isInstanceOf[Empty])
+      that incl elem
+    else
+       right union( left union (that incl  elem))
+       //((left union right) union that) incl elem
+      //((that incl elem) union left) union right - infinite loop
+
+    //optimized version of union, O(n). Best way to do it.
+    //that.filterAcc({p:Tweet => true}, this)
   }
 
   override def descendingByRetweet: TweetList = {
@@ -146,22 +158,18 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
 
   override def mostRetweeted: Tweet ={
 
-    var retTweet: Tweet = elem
-
-    if (left.isInstanceOf[NonEmpty]){
-      val t = left.mostRetweeted
-      if (t.retweets > retTweet.retweets)
-        retTweet = t
+    def innerCheck(ele:Tweet, s: TweetSet):Tweet = {
+      if( s.isInstanceOf[NonEmpty]) {
+        val temp = s.mostRetweeted
+        if (temp.retweets > ele.retweets)
+          new Tweet(temp.user, temp.text, temp.retweets)
+        else
+          ele
+      }else
+        ele
     }
 
-    if (right.isInstanceOf[NonEmpty]) {
-      val t = right.mostRetweeted
-      if (t.retweets > retTweet.retweets)
-        retTweet = t
-    }
-
-    new Tweet(retTweet.user, retTweet.text, retTweet.retweets)
-
+    innerCheck(innerCheck(elem, left), right)
   }
 
   def contains(x: Tweet): Boolean =
@@ -214,30 +222,23 @@ object GoogleVsApple {
   val apple = List("ios", "iOS", "iphone", "iPhone", "ipad", "iPad")
 
   lazy val googleTweets: TweetSet = {
-
-    val twSet = TweetReader.allTweets
-    var gtwSet: TweetSet = new Empty
-
-    for( tw <- twSet){
-      for( kw <- google){
-         if (tw.text.contains(kw))
-           gtwSet = gtwSet.incl(tw)
-      }
-    }
-      gtwSet
+    val totalSet = TweetReader.allTweets
+    totalSet.filter({tw: Tweet => conditionList(tw, google)})
   }
+
+  def conditionList(tw: Tweet, l:List[String]):Boolean = {
+    if(l.isEmpty)
+      false
+    else if (tw.text.contains(l.head))
+      true
+    else
+      conditionList(tw, l.tail)
+  }
+
   lazy val appleTweets: TweetSet = {
+    val totalSet = TweetReader.allTweets
+    totalSet.filter({tw: Tweet => conditionList(tw, apple)})
 
-    val twSet = TweetReader.allTweets
-    var atwSet: TweetSet = new Empty
-
-    for(tw <- twSet){
-      for(kw <- apple){
-        if (tw.text.contains(kw))
-          atwSet = atwSet.incl(tw)
-      }
-    }
-    atwSet
   }
 
   /**
@@ -245,12 +246,11 @@ object GoogleVsApple {
    * sorted by the number of retweets.
    */
   lazy val trending: TweetList = {
-    var tw = appleTweets.union(googleTweets)
+    val tw = appleTweets.union(googleTweets)
     tw.descendingByRetweet
   }
 }
 
 object Main extends App {
-  // Print the trending tweets
   GoogleVsApple.trending foreach println
 }
