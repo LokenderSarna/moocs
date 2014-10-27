@@ -4,3 +4,4 @@ target
 bundles
 *.classpath
 *.project
+*.jar
