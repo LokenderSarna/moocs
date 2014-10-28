@@ -130,16 +130,20 @@ object Huffman {
 
   def combine(trees: List[CodeTree]): List[CodeTree] = {
 
-    val left = trees.head
-    val right = trees.tail.head
+    if(trees.size < 2)
+      trees
+    else{
+      val left = trees.head
+      val right = trees.tail.head
 
-    val newNode = (trees.head, trees.tail.head) match {
-      case (Leaf(c, w), Leaf(c1, w1)) => new Fork(left, right, List(c, c1), w + w1)
-      case (Leaf(c, w), Fork(l, r, c1, w1)) => new Fork(left, right, List(c) ::: c1, w + w1)
-      case (Fork(l, r, c, w), Leaf(c1, w1)) => new Fork(left, right, c ::: List(c1), w + w1)
-      case (Fork(_, _, c, w), Fork(_, _, c1, w1)) => new Fork(left, right, c ::: c1, w + w1)
+      val newNode = (trees.head, trees.tail.head) match {
+        case (Leaf(c, w), Leaf(c1, w1)) => new Fork(left, right, List(c, c1), w + w1)
+        case (Leaf(c, w), Fork(l, r, c1, w1)) => new Fork(left, right, List(c) ::: c1, w + w1)
+        case (Fork(l, r, c, w), Leaf(c1, w1)) => new Fork(left, right, c ::: List(c1), w + w1)
+        case (Fork(_, _, c, w), Fork(_, _, c1, w1)) => new Fork(left, right, c ::: c1, w + w1)
+      }
+      insert(trees.tail.tail, newNode)
     }
-    insert(trees.tail.tail, newNode)
   }
 
   /**
@@ -205,7 +209,7 @@ object Huffman {
               decodeInner(tree, bits.tail, left, constList)
             else
               decodeInner(tree, bits.tail, right, constList)
-           }
+          }
         }
       }
     }
