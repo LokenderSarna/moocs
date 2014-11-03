@@ -148,6 +148,13 @@ object Anagrams {
     y.foldLeft(x)(inner _)
   }
 
+  def findAnagramsFromOccurrences(occur: Occurrences): List[Word] = {
+    dictionaryByOccurrences get (occur) match {
+      case Some(l) => l
+      case None => List()
+    }
+  }
+
   /** Returns a list of all anagram sentences of the given sentence.
     *
     * An anagram of a sentence is formed by taking the occurrences of all the characters of
@@ -190,32 +197,27 @@ object Anagrams {
     */
   def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
 
-    def findAnagramsFromOccurences(occur: Occurrences): List[Word] = {
-      dictionaryByOccurrences get (occur) match {
-        case Some(l) => l
-        case None => List()
-      }
-    }
-
     def inner(occList: Occurrences): List[Sentence] = {
       if (occList.size == 0)
         List(List())
       else {
+        var finalList :List[Sentence] = List()
         val perms = combinations(occList)
-        print(perms)
-        for {
-          perm <- perms
-          headwordList = findAnagramsFromOccurences(perm)
-          remain = subtract(occList, perm)
-          tailWordList <- inner(remain)
-          if (headwordList.size > 0 && tailWordList.size > 0)
-        } yield {
-          headwordList ::: tailWordList
+        for( perm <- perms){
+          if( perm.size > 0){
+            val remain = subtract(occList, perm)
+            val headwordList = findAnagramsFromOccurrences(perm)
+            val tailSentenceList = inner(remain)
+            for(headWord <- headwordList){
+              for(tailSentence <- tailSentenceList){
+                finalList = (headWord::tailSentence) :: finalList
+              }
+            }
+          }
         }
+        finalList
       }
     }
-    print(sentenceOccurrences(sentence))
     inner(sentenceOccurrences(sentence))
   }
-
 }
