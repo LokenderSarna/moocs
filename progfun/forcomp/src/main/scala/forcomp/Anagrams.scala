@@ -135,10 +135,6 @@ object Anagrams {
       if (y.head._1 == ele._1) {
         if (y.head._2 - ele._2 > 0)
           (ele._1, y.head._2 - ele._2) :: y.tail
-        else if (y.head._2 - ele._2 < 0) {
-          assert(false, "This should not happen")
-          y.tail
-        }
         else
           y.tail
       }
@@ -201,21 +197,15 @@ object Anagrams {
       if (occList.size == 0)
         List(List())
       else {
-        var finalList :List[Sentence] = List()
         val perms = combinations(occList)
-        for( perm <- perms){
-          if( perm.size > 0){
-            val remain = subtract(occList, perm)
-            val headwordList = findAnagramsFromOccurrences(perm)
-            val tailSentenceList = inner(remain)
-            for(headWord <- headwordList){
-              for(tailSentence <- tailSentenceList){
-                finalList = (headWord::tailSentence) :: finalList
-              }
-            }
-          }
-        }
-        finalList
+        for {
+          perm <- perms.filter(_.size > 0)
+          remain = subtract(occList, perm)
+          headwordList = findAnagramsFromOccurrences(perm)
+          tailSentenceList = inner(remain)
+          headWord <- headwordList
+          tailSentence <- tailSentenceList
+        } yield {headWord :: tailSentence}
       }
     }
     inner(sentenceOccurrences(sentence))
