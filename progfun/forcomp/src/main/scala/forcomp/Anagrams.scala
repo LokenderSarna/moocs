@@ -200,11 +200,8 @@ object Anagrams {
         val perms = combinations(occList)
         for {
           perm <- perms.filter(_.size > 0)
-          remain = subtract(occList, perm)
-          headwordList = findAnagramsFromOccurrences(perm)
-          tailSentenceList = inner(remain)
-          headWord <- headwordList
-          tailSentence <- tailSentenceList
+          headWord <- findAnagramsFromOccurrences(perm)
+          tailSentence <- inner(subtract(occList, perm))
         } yield {headWord :: tailSentence}
       }
     }
