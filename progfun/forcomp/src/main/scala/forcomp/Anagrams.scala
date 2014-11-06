@@ -199,7 +199,7 @@ object Anagrams {
       else {
         val perms = combinations(occList)
         for {
-          perm <- perms.filter(_.size > 0)
+          perm <- perms.withFilter(_.size > 0)
           headWord <- findAnagramsFromOccurrences(perm)
           tailSentence <- inner(subtract(occList, perm))
         } yield {headWord :: tailSentence}
