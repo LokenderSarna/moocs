@@ -61,6 +61,7 @@ alpha = 0.01;
 
 % compute and display initial cost
 computeCost(X, y, theta)
+%fprintf("Reached here");
 
 % run gradient descent
 theta = gradientDescent(X, y, theta, alpha, iterations);
