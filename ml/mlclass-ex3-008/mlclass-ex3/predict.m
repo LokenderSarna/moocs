@@ -22,7 +22,17 @@ p = zeros(size(X, 1), 1);
 %
 
 
-
+X = [ones(m,1) X];
+for c=1:m
+	t1 = Theta1 * X(c,:)';
+	t2 = sigmoid(t1);
+	t3 = [1;t2];
+	t4 = Theta2 * t3;
+	t5 = sigmoid(t4);
+	[u,t6] = max(t5);
+	%keyboard()
+	p(c) = t6;
+endfor
 
 
 

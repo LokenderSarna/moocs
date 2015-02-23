@@ -13,7 +13,6 @@ num_labels = size(all_theta, 1);
 
 % You need to return the following variables correctly 
 p = zeros(size(X, 1), 1);
-
 % Add ones to the X data matrix
 X = [ones(m, 1) X];
 
@@ -29,6 +28,9 @@ X = [ones(m, 1) X];
 %       are in rows, then, you can use max(A, [], 2) to obtain the max 
 %       for each row.
 %       
+
+temp = sigmoid(X * all_theta');
+[t,p] = max(temp, [],2);
 
 
 
