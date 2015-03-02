@@ -38,6 +38,18 @@ Theta2_grad = zeros(size(Theta2));
 %         variable J. After implementing Part 1, you can verify that your
 %         cost function computation is correct by verifying the cost
 %         computed in ex4.m
+
+h1 = sigmoid([ones(m, 1) X] * Theta1');
+h2 = sigmoid([ones(m, 1) h1] * Theta2');
+
+ for i=1:m
+		 y1 = zeros(num_labels,1);
+		 y1(y(i)) = 1;
+		 h = h2(i,:)' ;
+		 J = J + -1/m * sum((y1 .* log(h)) + (1 - y1) .* log(1 - h));
+endfor
+J = J + lambda/(2*m) * (sum(sum(Theta1(:, 2: end).^2)) + sum(sum(Theta2(:, 2:end).^2)) )
+
 %
 % Part 2: Implement the backpropagation algorithm to compute the gradients
 %         Theta1_grad and Theta2_grad. You should return the partial derivatives of
@@ -54,6 +66,26 @@ Theta2_grad = zeros(size(Theta2));
 %               over the training examples if you are implementing it for the 
 %               first time.
 %
+Del1 = zeros(size(Theta1));
+Del2 = zeros(size(Theta2));
+
+for i=1:m
+	a1 = [1; X(i,:)']; % 401 x 1
+	z2 = Theta1 * a1 ; % 25 x 1 
+	a2 = [1; sigmoid(z2)]; % 26 x 1
+	z3 = Theta2 * a2; % 10 x 1
+	a3 = sigmoid(z3); % 10 x 1
+	yc = zeros(num_labels, 1);
+	yc(y(i)) = 1; % 10 x 1 
+	del3 = a3 - yc;
+	del2 = (Theta2(:,2:end)' * del3) .* sigmoidGradient(z2); % 25 *10 x 10 * 1 = 25 x 1 
+    Del1 = Del1 + del2 * a1' ; % 25 * 400
+	Del2 = Del2 + del3 * a2' ; % 10 * 25
+endfor
+
+Theta1_grad = Del1/m;
+Theta2_grad = Del2/m;
+
 % Part 3: Implement regularization with the cost function and gradients.
 %
 %         Hint: You can implement this around the code for
@@ -61,26 +93,10 @@ Theta2_grad = zeros(size(Theta2));
 %               the regularization separately and then add them to Theta1_grad
 %               and Theta2_grad from Part 2.
 %
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% -------------------------------------------------------------
+Theta1_mod = [zeros(size(Theta1,1),1) Theta1(:, 2:end)];
+Theta2_mod = [zeros(size(Theta2,1),1) Theta2(:, 2:end)];
+Theta1_grad = Theta1_grad + (lambda/m) * Theta1_mod;
+Theta2_grad = Theta2_grad + (lambda/m) * Theta2_mod;
 
 % =========================================================================
 
