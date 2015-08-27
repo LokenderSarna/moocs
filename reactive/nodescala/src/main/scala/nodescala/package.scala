@@ -59,9 +59,9 @@ package object nodescala {
     /** Returns a future with a unit value that is completed after time `t`.
      */
     def delay(t: Duration): Future[Unit] = {
-      Future {
-        Thread.sleep(t.toMillis)
-      }
+      val p = Promise[Unit]()
+      Future {Thread.sleep(t.toMillis)}.onComplete(p.complete(_))
+      p.future
     }
 
     /** Completes this future with user input.
@@ -74,8 +74,16 @@ package object nodescala {
 
     /** Creates a cancellable context for an execution and runs it.
      */
-    def run()(f: CancellationToken => Future[Unit]): Subscription = ???
-
+    def run()(f: CancellationToken => Future[Unit]): Subscription = {
+      val source = CancellationTokenSource()
+      val token = source.cancellationToken
+      f (token)
+      new Subscription {
+        override def unsubscribe(): Unit = {
+          source.unsubscribe()
+        }
+      }
+    }
   }
 
   /** Adds extension methods to future objects.
@@ -90,7 +98,7 @@ package object nodescala {
      *  However, it is also non-deterministic -- it may throw or return a value
      *  depending on the current state of the `Future`.
      */
-    def now: T = ???
+    def now: T = Try(Await.result(f, 0 nanos)).getOrElse(throw new NoSuchElementException)
 
     /** Continues the computation of this future by taking the current future
      *  and mapping it into another future.
@@ -98,7 +106,11 @@ package object nodescala {
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    def continueWith[S](cont: Future[T] => S): Future[S] = ???
+    def continueWith[S](cont: Future[T] => S): Future[S] = f.map(fi => {
+      val p = Promise[T]()
+      p.success(fi)
+      cont(p.future)
+    })
 
     /** Continues the computation of this future by taking the result
      *  of the current future and mapping it into another future.
@@ -106,8 +118,16 @@ package object nodescala {
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    def continue[S](cont: Try[T] => S): Future[S] = ???
-
+    def continue[S](cont: Try[T] => S): Future[S] = {
+      val p = Promise[S]()
+      f.onComplete {
+        case fi => Try(cont(fi)) match {
+          case Success(v) => p.success(v)
+          case Failure(f) => p.failure(f)
+        }
+      }
+      p.future
+    }
   }
 
   /** Subscription objects are used to be able to unsubscribe
