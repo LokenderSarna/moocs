@@ -1,6 +1,6 @@
 Source code of MOOCS
 =====
 
-progfun = Functional Programming Principles in Scala
-
-ml = Machine Learning
+reactive  =   Principles of Reactive Programming
+progfun   =   Functional Programming Principles in Scala
+ml        =   Machine Learning
