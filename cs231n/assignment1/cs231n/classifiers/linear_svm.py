@@ -74,8 +74,8 @@ def svm_loss_vectorized(W, X, y, reg):
     that X[i] has label c, where 0 <= c < C.
   - reg: (float) regularization strength
   """
-  loss = 0.0
-  dW = np.zeros(W.shape) # initialize the gradient as zero
+  loss = np.float64(0.0)
+  dW = np.zeros(W.shape, dtype='float64') # initialize the gradient as zero
   num_train = X.shape[0]
   num_classes = W.shape[1]
 
@@ -89,7 +89,8 @@ def svm_loss_vectorized(W, X, y, reg):
   correct_scores = scores[y, np.arange(num_train)]
   threshold = np.maximum(scores - correct_scores + 1, 0)
   loss_raw = np.sum(threshold, axis=0) - 1  # N,1
-  loss = np.sum(loss_raw) / num_train
+  loss_raw = loss_raw / np.float64(num_train)
+  loss = np.sum(loss_raw) 
   loss += 0.5 * reg * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
