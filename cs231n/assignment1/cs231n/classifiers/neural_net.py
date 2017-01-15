@@ -74,7 +74,9 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    y1 = np.dot(X, W1) + b1
+    y1_act = np.maximum(y1, 0) #N, H
+    scores = np.dot(y1_act, W2) + b2 # N, C
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -92,7 +94,15 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    pass
+    # for numerical stability substract the max class score from all the class 
+    # scores for all the training examples.
+    norm_scores = scores - np.max(scores, axis=1).reshape((N, 1)) 
+    exp_scores = np.exp(norm_scores)
+    prob = exp_scores / np.sum(exp_scores, axis=1).reshape((N, 1))
+    # Get the right prob score for the labels and compute the loss.
+    losses = -np.log(prob[np.arange(N), y])
+    loss = np.mean(losses)
+    loss += 0.5 * reg * (np.sum(W1* W1) + np.sum(W2*W2)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -104,7 +114,20 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    preloss_grad = prob
+    preloss_grad[np.arange(N), y] -= 1
+    preloss_grad = preloss_grad / N; # N,C
+    grads["b2"] =  np.sum(preloss_grad, axis=0) # C,
+    grads["W2"] = np.dot(y1_act.T, preloss_grad)
+    grad_post_activation = np.dot(preloss_grad, W2.T) #N,H
+    pre_act_mask = y1 > 0
+    grad_pre_act = np.multiply(grad_post_activation, pre_act_mask) #N,H
+    grads["b1"] = np.sum(grad_pre_act, axis=0) #H
+    grads["W1"] = np.dot(X.T, grad_pre_act)
+
+    # Now add the regularization gradients
+    grads["W2"] += reg * W2
+    grads["W1"] += reg * W1
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -208,7 +231,8 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    scores = self.loss(X)
+    y_pred = np.argmax(scores, axis=1)
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
