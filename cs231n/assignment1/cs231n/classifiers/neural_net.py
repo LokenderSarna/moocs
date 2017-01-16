@@ -99,10 +99,12 @@ class TwoLayerNet(object):
     norm_scores = scores - np.max(scores, axis=1).reshape((N, 1)) 
     exp_scores = np.exp(norm_scores)
     prob = exp_scores / np.sum(exp_scores, axis=1).reshape((N, 1))
+
     # Get the right prob score for the labels and compute the loss.
     losses = -np.log(prob[np.arange(N), y])
     loss = np.mean(losses)
-    loss += 0.5 * reg * (np.sum(W1* W1) + np.sum(W2*W2)
+    loss += 0.5 * reg * (np.sum(W1* W1) + np.sum(W2*W2))
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -131,8 +133,8 @@ class TwoLayerNet(object):
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
-
     return loss, grads
+
 
   def train(self, X, y, X_val, y_val,
             learning_rate=1e-3, learning_rate_decay=0.95,
@@ -162,16 +164,25 @@ class TwoLayerNet(object):
     loss_history = []
     train_acc_history = []
     val_acc_history = []
+    indices = np.arange(num_train)
+
+    # Used for momentum update
+    v_w1 = np.zeros(self.params['W1'].shape)
+    v_w2 = np.zeros(self.params['W2'].shape)
+    v_b1 = np.zeros(self.params['b1'].shape)
+    v_b2 = np.zeros(self.params['b2'].shape)
+    mu = 0.9
 
     for it in xrange(num_iters):
       X_batch = None
       y_batch = None
-
       #########################################################################
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
-      pass
+      mask = np.random.choice(indices, batch_size, replace=True)
+      X_batch = X[mask]
+      y_batch = y[mask]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -186,7 +197,15 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
-      pass
+      v_w1 = v_w1 * mu - learning_rate * grads['W1']
+      v_w2 = v_w2 * mu - learning_rate * grads['W2']
+      v_b1 = v_b1 * mu - learning_rate * grads['b1']
+      v_b2 = v_b2 * mu - learning_rate * grads['b2']
+
+      self.params['W1'] += v_w1
+      self.params['W2'] += v_w2
+      self.params['b1'] += v_b1
+      self.params['b2'] += v_b2
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -238,5 +257,4 @@ class TwoLayerNet(object):
     ###########################################################################
 
     return y_pred
-
 
