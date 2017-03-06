@@ -19,9 +19,39 @@ class PartialParse(object):
         """
         # The sentence being parsed is kept for bookkeeping purposes. Do not use it in your code.
         self.sentence = sentence
+        self.stack = ["ROOT"]
+        self.dependencies = []
+        self.buffer = list(sentence)
 
-        ### YOUR CODE HERE
-        ### END YOUR CODE
+    def shift(self):
+	if len (self.buffer) > 0:
+            ele = self.buffer[0]
+            self.buffer = self.buffer[1:]
+            self.stack.append(ele)
+	    return None
+	else:
+	    return None
+    
+    def left_arc(self):
+	if len(self.stack) > 1:
+	    first = self.stack.pop()
+	    second = self.stack.pop()
+	    self.dependencies.append((first, second))
+	    self.stack.append(first)
+ 	    return (first, second)
+	else:
+	    return None
+
+    def right_arc(self):
+        if len(self.stack) >= 2:
+            first = self.stack.pop()
+            second = self.stack.pop()
+            self.dependencies.append((second, first))
+            # we only want to remove the first element from the stack
+            self.stack.append(second)
+            return (second, first)
+        else:
+            return None
 
     def parse_step(self, transition):
         """Performs a single parse step by applying the given transition to this partial parse
@@ -30,8 +60,15 @@ class PartialParse(object):
             transition: A string that equals "S", "LA", or "RA" representing the shift, left-arc,
                         and right-arc transitions.
         """
-        ### YOUR CODE HERE
-        ### END YOUR CODE
+        debug = True
+        if transition == "S":
+	    self.shift()
+        if transition == "LA":
+	    if self.left_arc() is None:
+                self.shift()
+        if transition == "RA":
+            if self.right_arc() is None:
+                self.shift()
 
     def parse(self, transitions):
         """Applies the provided transitions to this PartialParse
@@ -45,6 +82,9 @@ class PartialParse(object):
         for transition in transitions:
             self.parse_step(transition)
         return self.dependencies
+
+    def is_complete(self):
+        return len(self.stack) == 1 and len(self.buffer) == 0
 
 
 def minibatch_parse(sentences, model, batch_size):
@@ -63,12 +103,22 @@ def minibatch_parse(sentences, model, batch_size):
                       Ordering should be the same as in sentences (i.e., dependencies[i] should
                       contain the parse for sentences[i]).
     """
+    partial_parses = [PartialParse(sentence) for sentence in sentences]
+    # shallow copy
+    unfinished_parses = list(partial_parses)
+    while len(unfinished_parses) > 0:
+        parse_batch = unfinished_parses[:batch_size]
+        transitions = model.predict(parse_batch)
+        # apply the transitions to parse_batch
+        for i in range(0, len(transitions)):
+            parse_batch[i].parse_step(transitions[i])
+       
+        # Remove all complete parses
+        unfinished_parses = filter(lambda parse: not parse.is_complete(), 
+                unfinished_parses)
 
-    ### YOUR CODE HERE
-    ### END YOUR CODE
-
+    dependencies = [parse.dependencies for parse in partial_parses]
     return dependencies
-
 
 def test_step(name, transition, stack, buf, deps,
               ex_stack, ex_buf, ex_deps):
@@ -139,6 +189,7 @@ def test_minibatch_parse():
                  ["right", "arcs", "only", "again"],
                  ["left", "arcs", "only"],
                  ["left", "arcs", "only", "again"]]
+
     deps = minibatch_parse(sentences, DummyModel(), 2)
     test_dependencies("minibatch_parse", deps[0],
                       (('ROOT', 'right'), ('arcs', 'only'), ('right', 'arcs')))
