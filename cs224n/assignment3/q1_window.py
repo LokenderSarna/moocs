@@ -37,7 +37,7 @@ class Config:
     n_word_features = 2 # Number of features for every word in the input.
     window_size = 1 # The size of the window to use.
     ### YOUR CODE HERE
-    n_window_features = 0 # The total number of features used for each window.
+    n_window_features = 6 # The total number of features used for each window.
     ### END YOUR CODE
     n_classes = 5
     dropout = 0.5
@@ -147,7 +147,9 @@ class WindowModel(NERModel):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE (~3-5 lines)
-
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.n_window_features))
+        self.labels_placeholder = tf.placeholder(tf.int32, shape=(None,))
+        self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
@@ -169,9 +171,14 @@ class WindowModel(NERModel):
         Returns:
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
-        ### YOUR CODE HERE (~5-10 lines)
-         
-        ### END YOUR CODE
+        feed_dict = {}
+        if inputs_batch is not None:
+            feed_dict[self.input_placeholder] = inputs_batch
+        if labels_batch is not None:
+            feed_dict[self.labels_placeholder] = labels_batch
+        if dropout is not None:
+            feed_dict[self.dropout_placeholder] = dropout
+
         return feed_dict
 
     def add_embedding(self):
@@ -190,11 +197,11 @@ class WindowModel(NERModel):
         Returns:
             embeddings: tf.Tensor of shape (None, n_window_features*embed_size)
         """
-        ### YOUR CODE HERE (!3-5 lines)
-                                                             
-                                  
-                                                                                                                 
-        ### END YOUR CODE
+        pretrained_embeddings = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.nn.embedding_lookup(
+                pretrained_embeddings, self.input_placeholder)
+        embeddings = tf.reshape(
+                embeddings, [-1, self.config.n_window_features * self.config.embed_size])
         return embeddings
 
     def add_prediction_op(self):
@@ -220,12 +227,29 @@ class WindowModel(NERModel):
         Returns:
             pred: tf.Tensor of shape (batch_size, n_classes)
         """
-
+        feature_size = self.config.n_window_features * self.config.embed_size
+        hidden_size = self.config.hidden_size
+        num_classes = self.config.n_classes 
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
-        ### YOUR CODE HERE (~10-20 lines)
+        initializer = tf.contrib.layers.xavier_initializer()
 
-        ### END YOUR CODE
+        W = tf.get_variable(
+                name="W",
+                shape = [feature_size, hidden_size],
+                initializer=initializer)
+        b1 =  tf.Variable(tf.zeros([hidden_size]))
+
+        U = tf.get_variable(
+                name = "U",
+                shape = [hidden_size, num_classes],
+                initializer = initializer)
+        b2 = tf.Variable(tf.zeros([num_classes]))
+
+        z = tf.matmul(x, W) + b1
+        h = tf.nn.relu(z)
+        h_drop = tf.nn.dropout(h, dropout_rate)
+        pred = tf.matmul(h_drop, U) + b2
         return pred
 
     def add_loss_op(self, pred):
@@ -241,9 +265,11 @@ class WindowModel(NERModel):
         Returns:
             loss: A 0-d tensor (scalar)
         """
-        ### YOUR CODE HERE (~2-5 lines)
-                                   
-        ### END YOUR CODE
+        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                labels=self.labels_placeholder,
+                logits=pred,
+                name="cross_entropy")
+        loss = tf.reduce_mean(cross_entropy)
         return loss
 
     def add_training_op(self, loss):
@@ -265,9 +291,8 @@ class WindowModel(NERModel):
         Returns:
             train_op: The Op for training.
         """
-        ### YOUR CODE HERE (~1-2 lines)
-
-        ### END YOUR CODE
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.config.lr)
+        train_op = optimizer.minimize(loss)
         return train_op
 
     def preprocess_sequence_data(self, examples):
@@ -299,6 +324,7 @@ class WindowModel(NERModel):
         return predictions
 
     def train_on_batch(self, sess, inputs_batch, labels_batch):
+        print inputs_batch.shape, labels_batch.shape
         feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch,
                                      dropout=self.config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
