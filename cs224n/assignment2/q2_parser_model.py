@@ -84,9 +84,9 @@ class ParserModel(Model):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         feed_dict = {}
-        if (self.input_placeholder is not None): 
+        if (inputs_batch is not None): 
             feed_dict[self.input_placeholder] = inputs_batch
-        if (self.dropout_placeholder is not None):
+        if (dropout is not None):
             feed_dict[self.dropout_placeholder] = dropout
         if (labels_batch is not None):
             feed_dict[self.labels_placeholder] = labels_batch
@@ -154,7 +154,7 @@ class ParserModel(Model):
         b2 = tf.Variable(tf.zeros([n_classes]))
 
         h = tf.nn.relu(tf.matmul(x, W) + b1)
-        h_drop = tf.nn.dropout(h, 1 - self.dropout_placeholder)
+        h_drop = tf.nn.dropout(h, self.dropout_placeholder)
         pred = tf.matmul(h_drop, U) + b2
         return pred
 
